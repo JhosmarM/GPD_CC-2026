@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>GPD | CC2026 Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        body { background-color: #030712; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .table-container { max-height: 55vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #3b82f6 #0f172a; }
+        th { position: sticky; top: 0; z-index: 10; background-color: #111827; }
+        .drag-over { background-color: rgba(59, 130, 246, 0.15) !important; border-color: #60a5fa !important; }
+        .plat-fb { color: #3b82f6; font-weight: bold; }
+        .plat-google { color: #facc15; font-weight: bold; }
+        .plat-tiktok { color: #ec4899; font-weight: bold; }
+        .plat-dv360 { color: #10b981; font-weight: bold; }
+        .plat-other { color: #a8a29e; font-weight: bold; }
+        .row-updated { animation: highlight 2s ease-out; }
+        @keyframes highlight { 0% { background-color: rgba(59, 130, 246, 0.3); } 100% { background-color: transparent; } }
+        .inline-select { background: transparent; border-bottom: 1px dashed rgba(255,255,255,0.3); outline: none; cursor: pointer; color: inherit; padding-bottom: 2px; }
+        .inline-select option { background: #111827; color: #fff; }
+        .sortable-header { cursor: pointer; transition: color 0.2s; user-select: none; }
+        .sortable-header:hover { color: #60a5fa; }
+        .sort-icon { display: inline-block; width: 12px; margin-left: 4px; font-size: 10px; color: #3b82f6; }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-[1600px] mx-auto">
+        <div class="glass flex flex-col md:flex-row justify-between items-center p-4 rounded-2xl mb-6 border-b-4 border-blue-600 shadow-lg gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-white tracking-tighter">GPD <span class="text-blue-500">CC2026</span></h1>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Cloud Sync Active ☁️</p>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-700">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Cuenta Activa:</label>
+                <div class="flex gap-2">
+                    <select id="client_selector" class="bg-black text-blue-400 text-sm font-bold p-2 rounded-lg outline-none border border-slate-800 cursor-pointer focus:border-blue-500">
+                        <option value="ALTICE">ALTICE</option>
+                        <option value="BANCO BHD">BANCO BHD</option>
+                        <option value="NESTLÉ">NESTLÉ</option>
+                        <option value="BANCO SANTA CRUZ">BANCO SANTA CRUZ</option>
+                        <option value="APAP">APAP</option>
+                    </select>
+                    <button onclick="addNewClient()" class="bg-slate-800 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-6">
+            <div class="xl:col-span-1">
+                <div id="drop_zone" class="glass border-2 border-dashed border-slate-600 p-6 rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center h-full hover:border-blue-400 hover:bg-blue-900/20 group">
+                    <svg class="w-10 h-10 text-slate-500 group-hover:text-blue-400 mb-3 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <p class="text-sm font-bold text-slate-300 uppercase" id="drop_text">Arrastra el Reporte (CSV)</p>
+                    <p class="text-[10px] text-emerald-400 font-bold mt-1 bg-emerald-900/30 px-2 py-1 rounded">Sincronización en Tiempo Real</p>
+                    <input type="file" id="file_input" class="hidden" accept=".csv">
+                </div>
+            </div>
+
+            <div class="xl:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass p-5 rounded-2xl border-l-4 border-blue-500">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Inversión Acumulada</p>
+                    <h3 id="tot_spend" class="text-3xl font-black text-white">$0.00</h3>
+                </div>
+                <div class="glass p-5 rounded-2xl border-l-4 border-emerald-500">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Impresiones Totales</p>
+                    <h3 id="tot_imp" class="text-3xl font-black text-emerald-400">0</h3>
+                </div>
+                <div class="glass p-5 rounded-2xl border-l-4 border-purple-500">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Campañas Cargadas</p>
+                    <h3 id="tot_camp" class="text-3xl font-black text-purple-400">0</h3>
+                </div>
+                <div class="glass p-5 rounded-2xl border-l-4 border-amber-500">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">CPM Promedio Global</p>
+                    <h3 id="avg_cpm" class="text-3xl font-black text-amber-400">$0.00</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden shadow-2xl relative border border-slate-800">
+            <div class="bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-800">
+                <h2 class="text-xs font-bold text-white uppercase tracking-widest">Base de Datos <span id="lbl_client" class="text-blue-400">- ALTICE</span></h2>
+                <button onclick="clearCurrentClient()" class="text-[10px] bg-red-900/50 hover:bg-red-600 text-red-300 hover:text-white px-3 py-1 rounded transition-colors font-bold uppercase">Vaciar Cliente</button>
+            </div>
+            <div class="table-container">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+                        <tr>
+                            <th class="px-4 py-4 pl-6 sortable-header" onclick="sortTable('month')">Mes <span class="sort-icon" id="sort_icon_month"></span></th>
+                            <th class="px-4 py-4 sortable-header" onclick="sortTable('name')">Campaña <span class="sort-icon" id="sort_icon_name"></span></th>
+                            <th class="px-4 py-4 text-center sortable-header" onclick="sortTable('platform')">Plataforma <span class="sort-icon" id="sort_icon_platform"></span></th>
+                            <th class="px-4 py-4 text-right sortable-header text-blue-300" onclick="sortTable('spend')">Inversión US$ <span class="sort-icon" id="sort_icon_spend"></span></th>
+                            <th class="px-4 py-4 text-right sortable-header" onclick="sortTable('results')">Resultados <span class="sort-icon" id="sort_icon_results"></span></th>
+                            <th class="px-4 py-4 text-right sortable-header" onclick="sortTable('imp')">Impresiones <span class="sort-icon" id="sort_icon_imp"></span></th>
+                            <th class="px-4 py-4 text-right sortable-header" onclick="sortTable('cpr')">Costo x Result. <span class="sort-icon" id="sort_icon_cpr"></span></th>
+                            <th class="px-4 py-4 text-center">Última Act.</th>
+                            <th class="px-4 py-4 text-center pr-6">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table_body" class="divide-y divide-slate-800 text-[11px] text-slate-300"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 2. TUS CREDENCIALES DE FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyCh5fkwDR1Jd1KJoPVEwY8gazJI85s2-wE",
+            authDomain: "gpd-cc2026.firebaseapp.com",
+            projectId: "gpd-cc2026",
+            storageBucket: "gpd-cc2026.firebasestorage.app",
+            messagingSenderId: "800603232583",
+            appId: "1:800603232583:web:9a24bcb6652b9b65849462",
+            measurementId: "G-BHR8NSDJVW",
+            databaseURL: "https://gpd-cc2026-default-rtdb.firebaseio.com" // URL de tu Realtime Database
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let globalDatabase = [];
+        let currentSort = { field: null, dir: null };
+        const monthsList = ["-", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        const platformsList = ["FB / Instagram", "Google Ads", "DV360", "TikTok", "Twitter", "Spotify", "LinkedIn", "Programmatic"];
+
+        // ELEMENTOS DEL DOM
+        const dropZone = document.getElementById('drop_zone');
+        const fileInput = document.getElementById('file_input');
+        const dropText = document.getElementById('drop_text');
+        const clientSelector = document.getElementById('client_selector');
+        const lblClient = document.getElementById('lbl_client');
+
+        // --- FUNCIÓN PARA SINCRONIZAR CON LA NUBE ---
+        function syncCloud() {
+            db.ref('data_marketing').set(globalDatabase);
+        }
+
+        // --- ESCUCHAR CAMBIOS DESDE LA NUBE (TIEMPO REAL) ---
+        db.ref('data_marketing').on('value', (snapshot) => {
+            const data = snapshot.val();
+            globalDatabase = data ? Object.values(data) : [];
+            renderTable();
+        });
+
+        clientSelector.addEventListener('change', (e) => {
+            lblClient.innerText = `- ${e.target.value}`;
+            renderTable();
+        });
+
+        function addNewClient() {
+            let newClientName = prompt("Introduce el nombre del nuevo cliente:");
+            if (newClientName && newClientName.trim() !== "") {
+                newClientName = newClientName.trim().toUpperCase();
+                let exists = Array.from(clientSelector.options).some(opt => opt.value === newClientName);
+                if (!exists) {
+                    let newOption = document.createElement('option');
+                    newOption.value = newClientName;
+                    newOption.innerHTML = newClientName;
+                    clientSelector.appendChild(newOption);
+                }
+                clientSelector.value = newClientName;
+                lblClient.innerText = `- ${newClientName}`;
+                renderTable();
+            }
+        }
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length > 0) processCSV(e.target.files[0]);
+            fileInput.value = '';
+        });
+
+        const cleanNum = (val) => {
+            if(!val) return 0;
+            let str = val.toString().replace(/[$,]/g, '').trim();
+            let num = parseFloat(str);
+            return isNaN(num) ? 0 : num;
+        };
+
+        function detectMonth(name) {
+            let n = name.toLowerCase();
+            for (let m of monthsList) {
+                if (m !== "-" && n.includes(m.toLowerCase())) return m;
+            }
+            return "-";
+        }
+
+        function processCSV(file) {
+            if (!file) return;
+            dropText.innerText = "Sincronizando con la nube...";
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    const currentClient = clientSelector.value;
+                    const timestamp = new Date().toLocaleString();
+                    
+                    const headers = Object.keys(data[0] || {}).map(h => h.toLowerCase());
+                    let detectedPlatform = "Programmatic";
+                    if (headers.some(h => h.includes("importe gastado") || h.includes("amount spent"))) detectedPlatform = "FB / Instagram";
+                    else if (headers.some(h => h.includes("campaign state") || h.includes("ad group"))) detectedPlatform = "Google Ads";
+                    else if (headers.some(h => h.includes("tiktok"))) detectedPlatform = "TikTok";
+
+                    data.forEach(row => {
+                        const campana = row["Nombre de la campaña"] || row["Campaign name"] || row["Campaign"] || row["Campaña"] || "-";
+                        if(campana === "-" || campana.toLowerCase().includes("total")) return;
+
+                        const spend = cleanNum(row["Importe gastado (USD)"] || row["Amount spent (USD)"] || row["Cost"] || row["Costo"] || row["Spend"] || "0");
+                        const imp = cleanNum(row["Impresiones"] || row["Impressions"] || row["Impr."] || "0");
+                        const resultsVal = cleanNum(row["Resultados"] || row["Results"] || row["Clicks"] || row["Clics"] || "0");
+
+                        if(spend === 0 && imp === 0) return;
+
+                        const existingIndex = globalDatabase.findIndex(camp => camp.name === campana && camp.client === currentClient);
+
+                        if (existingIndex !== -1) {
+                            globalDatabase[existingIndex].spend = spend;
+                            globalDatabase[existingIndex].imp = imp;
+                            globalDatabase[existingIndex].results = resultsVal;
+                            globalDatabase[existingIndex].lastUpdate = timestamp;
+                            globalDatabase[existingIndex].isRecentlyUpdated = true;
+                        } else {
+                            globalDatabase.push({
+                                id: Date.now() + Math.random(),
+                                client: currentClient,
+                                name: campana,
+                                month: detectMonth(campana),
+                                platform: detectedPlatform,
+                                spend: spend,
+                                imp: imp,
+                                results: resultsVal,
+                                cpr: resultsVal > 0 ? spend / resultsVal : 0,
+                                lastUpdate: timestamp,
+                                isRecentlyUpdated: false
+                            });
+                        }
+                    });
+
+                    syncCloud(); // GUARDAR EN FIREBASE
+                    dropText.innerText = "¡Datos Sincronizados!";
+                    setTimeout(() => dropText.innerText = "Arrastra el Reporte (CSV)", 3000);
+                }
+            });
+        }
+
+        function updateInlineField(id, field, value) {
+            let index = globalDatabase.findIndex(c => c.id === id);
+            if(index !== -1) {
+                globalDatabase[index][field] = value;
+                syncCloud(); // GUARDAR EN FIREBASE
+            }
+        }
+
+        function deleteCampaign(id) {
+            if(confirm("¿Eliminar esta campaña de la nube?")) {
+                globalDatabase = globalDatabase.filter(camp => camp.id !== id);
+                syncCloud(); // GUARDAR EN FIREBASE
+            }
+        }
+
+        function clearCurrentClient() {
+            if(confirm(`¿Borrar TODA la data de ${clientSelector.value} para todos?`)) {
+                globalDatabase = globalDatabase.filter(camp => camp.client !== clientSelector.value);
+                syncCloud(); // GUARDAR EN FIREBASE
+            }
+        }
+
+        // ORDENAMIENTO Y RENDER (IGUAL A TU CÓDIGO)
+        function sortTable(field) {
+            if (currentSort.field === field) {
+                currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+            } else {
+                currentSort.field = field;
+                currentSort.dir = (field === 'name' || field === 'month') ? 'asc' : 'desc';
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table_body');
+            tbody.innerHTML = '';
+            
+            const currentClient = clientSelector.value;
+            let clientData = globalDatabase.filter(camp => camp.client === currentClient);
+
+            // Aplicar orden
+            if(currentSort.field) {
+                clientData.sort((a, b) => {
+                    let vA = a[currentSort.field], vB = b[currentSort.field];
+                    if (typeof vA === 'string') { vA = vA.toLowerCase(); vB = vB.toLowerCase(); }
+                    return currentSort.dir === 'asc' ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
+                });
+            }
+
+            let sumSpend = 0, sumImp = 0;
+
+            clientData.forEach((camp) => {
+                sumSpend += camp.spend;
+                sumImp += camp.imp;
+                let cpr = camp.results > 0 ? camp.spend / camp.results : 0;
+                
+                let platClass = "plat-other";
+                if(camp.platform.includes("FB")) platClass = "plat-fb";
+                if(camp.platform.includes("Google")) platClass = "plat-google";
+                if(camp.platform.includes("TikTok")) platClass = "plat-tiktok";
+
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-slate-800/50 transition-colors group ${camp.isRecentlyUpdated ? 'row-updated' : ''}`;
+                tr.innerHTML = `
+                    <td class="px-4 py-3 pl-6 font-bold">
+                        <select onchange="updateInlineField(${camp.id}, 'month', this.value)" class="inline-select text-blue-300 font-bold">
+                            ${monthsList.map(m => `<option value="${m}" ${camp.month === m ? 'selected' : ''}>${m}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="px-4 py-3 font-bold text-white max-w-[220px] truncate">${camp.name}</td>
+                    <td class="px-4 py-3 text-[10px] uppercase ${platClass}">
+                        <select onchange="updateInlineField(${camp.id}, 'platform', this.value)" class="inline-select ${platClass}">
+                            ${platformsList.map(p => `<option value="${p}" ${camp.platform === p ? 'selected' : ''}>${p}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono text-blue-400">$${camp.spend.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-right font-mono text-emerald-300">${camp.results.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-right font-mono text-slate-300">${camp.imp.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-right font-mono text-slate-400">$${cpr.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-center text-[10px] text-slate-400">${camp.lastUpdate}</td>
+                    <td class="px-4 py-3 text-center pr-6">
+                        <button onclick="deleteCampaign(${camp.id})" class="text-red-400 hover:text-white bg-red-900/20 p-1 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+                camp.isRecentlyUpdated = false;
+            });
+
+            // Update Stats
+            document.getElementById('tot_spend').innerText = `$${sumSpend.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('tot_imp').innerText = sumImp.toLocaleString();
+            document.getElementById('tot_camp').innerText = clientData.length;
+            document.getElementById('avg_cpm').innerText = sumImp > 0 ? `$${((sumSpend / sumImp) * 1000).toFixed(2)}` : "$0.00";
+        }
+    </script>
+</body>
+</html>
