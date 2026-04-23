@@ -35,14 +35,14 @@
         <div class="glass flex flex-col md:flex-row justify-between items-center p-4 rounded-2xl mb-6 border-b-4 border-blue-600 shadow-lg gap-4">
             <div>
                 <h1 class="text-2xl font-black text-white tracking-tighter">GPD <span class="text-blue-500">CC2026</span></h1>
-                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Workspace Manager & Data Cloud ☁️</p>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Cloud Sync Active ☁️</p>
             </div>
             <div class="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-700">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Cuenta Activa:</label>
                 <div class="flex gap-2">
-                    <select id="client_selector" class="bg-black text-blue-400 text-sm font-bold p-2 rounded-lg outline-none border border-slate-800 cursor-pointer focus:border-blue-500">
+                    <select id="client_selector" class="bg-black text-blue-400 text-sm font-bold p-2 rounded-lg outline-none border border-slate-800 cursor-pointer focus:border-blue-500 min-w-[150px]">
                         </select>
-                    <button onclick="addNewClient()" class="bg-slate-800 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-lg" title="Añadir Nuevo Cliente">
+                    <button onclick="addNewClient()" class="bg-slate-800 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-lg" title="Añadir Cliente">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </button>
                     <button onclick="deleteCurrentClient()" class="bg-slate-800 hover:bg-red-600 text-red-400 hover:text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-lg" title="Eliminar Cliente de la Lista">
@@ -57,7 +57,6 @@
                 <div id="drop_zone" class="glass border-2 border-dashed border-slate-600 p-6 rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center h-full hover:border-blue-400 hover:bg-blue-900/20 group">
                     <svg class="w-10 h-10 text-slate-500 group-hover:text-blue-400 mb-3 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                     <p class="text-sm font-bold text-slate-300 uppercase" id="drop_text">Arrastra el Reporte (CSV)</p>
-                    <p class="text-[10px] text-slate-500 mt-2">Sincronización automática con el equipo</p>
                     <input type="file" id="file_input" class="hidden" accept=".csv">
                 </div>
             </div>
@@ -85,9 +84,7 @@
         <div class="glass rounded-2xl overflow-hidden shadow-2xl relative border border-slate-800">
             <div class="bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-800">
                 <h2 class="text-xs font-bold text-white uppercase tracking-widest">Base de Datos <span id="lbl_client" class="text-blue-400">- CARGANDO...</span></h2>
-                <div class="flex gap-2">
-                    <button onclick="clearCampaignsByClient()" class="text-[10px] bg-red-900/50 hover:bg-red-600 text-red-300 hover:text-white px-3 py-1 rounded transition-colors font-bold uppercase">Vaciar Datos de Campañas</button>
-                </div>
+                <button onclick="clearCampaignsByClient()" class="text-[10px] bg-red-900/50 hover:bg-red-600 text-red-300 hover:text-white px-3 py-1 rounded transition-colors font-bold uppercase">Vaciar Datos de Cliente</button>
             </div>
             <div class="table-container">
                 <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -111,7 +108,7 @@
     </div>
 
     <script>
-        // 2. CONFIGURACIÓN DE FIREBASE (Usa tus credenciales)
+        // CONFIGURACIÓN DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyCh5fkwDR1Jd1KJoPVEwY8gazJI85s2-wE",
             authDomain: "gpd-cc2026.firebaseapp.com",
@@ -131,20 +128,20 @@
         const monthsList = ["-", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         const platformsList = ["FB / Instagram", "Google Ads", "DV360", "TikTok", "Twitter", "Spotify", "LinkedIn", "Programmatic"];
 
+        const clientSelector = document.getElementById('client_selector');
+        const lblClient = document.getElementById('lbl_client');
         const dropZone = document.getElementById('drop_zone');
         const fileInput = document.getElementById('file_input');
         const dropText = document.getElementById('drop_text');
-        const clientSelector = document.getElementById('client_selector');
-        const lblClient = document.getElementById('lbl_client');
 
-        // --- GESTIÓN DE CLIENTES EN LA NUBE ---
-        
+        // --- GESTIÓN DE CLIENTES ---
+
         db.ref('lista_clientes').on('value', (snapshot) => {
             const clientes = snapshot.val();
-            const currentSelected = clientSelector.value;
+            const lastVal = clientSelector.value;
             
             if (!clientes) {
-                const iniciales = ["ALTICE", "BANCO BHD", "NESTLÉ", "BANCO SANTA CRUZ", "APAP"];
+                const iniciales = ["ALTICE", "BANCO BHD", "NESTLÉ", "BANCO SANTA CRUZ", "APAP", "ALCANZA"];
                 db.ref('lista_clientes').set(iniciales);
                 return;
             }
@@ -157,68 +154,53 @@
                 clientSelector.appendChild(opt);
             });
 
-            if (clientes.includes(currentSelected)) {
-                clientSelector.value = currentSelected;
+            if (Array.from(clientSelector.options).some(o => o.value === lastVal)) {
+                clientSelector.value = lastVal;
             }
             lblClient.innerText = `- ${clientSelector.value}`;
             renderTable();
         });
 
         function addNewClient() {
-            let newClientName = prompt("Nombre del nuevo cliente:");
-            if (newClientName && newClientName.trim() !== "") {
-                newClientName = newClientName.trim().toUpperCase();
-                db.ref('lista_clientes').once('value', (snapshot) => {
-                    let clientes = snapshot.val() || [];
-                    if (!clientes.includes(newClientName)) {
-                        clientes.push(newClientName);
-                        db.ref('lista_clientes').set(clientes);
-                        clientSelector.value = newClientName;
-                    } else {
-                        alert("El cliente ya existe.");
-                    }
+            let name = prompt("Nombre del nuevo cliente:");
+            if (name && name.trim() !== "") {
+                name = name.trim().toUpperCase();
+                db.ref('lista_clientes').once('value', (s) => {
+                    let list = s.val() || [];
+                    if (!list.includes(name)) {
+                        list.push(name);
+                        db.ref('lista_clientes').set(list);
+                    } else { alert("Ya existe."); }
                 });
             }
         }
 
         function deleteCurrentClient() {
-            const clientToDelete = clientSelector.value;
-            
-            // Verificar si el cliente tiene campañas cargadas antes de borrarlo
-            const hasCampaigns = globalDatabase.some(camp => camp.client === clientToDelete);
-            
-            let msg = `¿Seguro que quieres borrar a "${clientToDelete}" de la lista?`;
-            if (hasCampaigns) {
-                msg = `¡ATENCIÓN! "${clientToDelete}" tiene campañas cargadas. Si lo borras de la lista, ya no podrás acceder a esos datos desde el selector. \n\n¿Proceder de todos modos?`;
-            }
-
-            if(confirm(msg)) {
-                db.ref('lista_clientes').once('value', (snapshot) => {
-                    let clientes = snapshot.val() || [];
-                    clientes = clientes.filter(c => c !== clientToDelete);
-                    db.ref('lista_clientes').set(clientes);
+            const target = clientSelector.value;
+            if (confirm(`¿Eliminar al cliente "${target}" de la lista?\n(Las campañas asociadas no se borrarán de la base de datos, pero no serán visibles en el selector).`)) {
+                db.ref('lista_clientes').once('value', (s) => {
+                    let list = s.val() || [];
+                    list = list.filter(c => c !== target);
+                    db.ref('lista_clientes').set(list);
                 });
             }
         }
 
-        // --- GESTIÓN DE DATOS (CAMPANAS) ---
+        // --- GESTIÓN DE DATOS ---
 
-        function syncCloud() {
-            db.ref('data_marketing').set(globalDatabase);
-        }
+        function syncCloud() { db.ref('data_marketing').set(globalDatabase); }
 
-        db.ref('data_marketing').on('value', (snapshot) => {
-            const data = snapshot.val();
-            globalDatabase = data ? Object.values(data) : [];
+        db.ref('data_marketing').on('value', (s) => {
+            globalDatabase = s.val() ? Object.values(s.val()) : [];
             renderTable();
         });
 
-        clientSelector.addEventListener('change', (e) => {
-            lblClient.innerText = `- ${e.target.value}`;
+        clientSelector.addEventListener('change', () => {
+            lblClient.innerText = `- ${clientSelector.value}`;
             renderTable();
         });
 
-        // --- PROCESAMIENTO CSV ---
+        // --- CSV Y TABLA (Lógica Base) ---
 
         dropZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
@@ -226,73 +208,43 @@
             fileInput.value = '';
         });
 
-        const cleanNum = (val) => {
-            if(!val) return 0;
-            let str = val.toString().replace(/[$,]/g, '').trim();
-            let num = parseFloat(str);
-            return isNaN(num) ? 0 : num;
-        };
-
-        function detectMonth(name) {
-            let n = name.toLowerCase();
-            for (let m of monthsList) {
-                if (m !== "-" && n.includes(m.toLowerCase())) return m;
-            }
-            return "-";
-        }
-
         function processCSV(file) {
-            if (!file) return;
-            dropText.innerText = "Subiendo a la nube...";
-
+            dropText.innerText = "Subiendo...";
             Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    const data = results.data;
-                    const currentClient = clientSelector.value;
-                    const timestamp = new Date().toLocaleString();
-                    
+                header: true, skipEmptyLines: true,
+                complete: function(r) {
+                    const data = r.data;
+                    const client = clientSelector.value;
+                    const time = new Date().toLocaleString();
                     const headers = Object.keys(data[0] || {}).map(h => h.toLowerCase());
-                    let detectedPlatform = "Programmatic";
-                    if (headers.some(h => h.includes("importe gastado") || h.includes("amount spent"))) detectedPlatform = "FB / Instagram";
-                    else if (headers.some(h => h.includes("campaign state") || h.includes("ad group"))) detectedPlatform = "Google Ads";
-                    else if (headers.some(h => h.includes("tiktok"))) detectedPlatform = "TikTok";
+                    
+                    let plat = "Programmatic";
+                    if (headers.some(h => h.includes("importe gastado") || h.includes("amount spent"))) plat = "FB / Instagram";
+                    else if (headers.some(h => h.includes("campaign state") || h.includes("ad group"))) plat = "Google Ads";
+                    else if (headers.some(h => h.includes("tiktok"))) plat = "TikTok";
 
                     data.forEach(row => {
-                        const campana = row["Nombre de la campaña"] || row["Campaign name"] || row["Campaign"] || row["Campaña"] || "-";
-                        if(campana === "-" || campana.toLowerCase().includes("total")) return;
-
-                        const spend = cleanNum(row["Importe gastado (USD)"] || row["Amount spent (USD)"] || row["Cost"] || row["Costo"] || row["Spend"] || "0");
-                        const imp = cleanNum(row["Impresiones"] || row["Impressions"] || row["Impr."] || "0");
-                        const resultsVal = cleanNum(row["Resultados"] || row["Results"] || row["Clicks"] || row["Clics"] || "0");
+                        const name = row["Nombre de la campaña"] || row["Campaign name"] || row["Campaign"] || row["Campaña"] || "-";
+                        if(name === "-" || name.toLowerCase().includes("total")) return;
+                        
+                        const spend = parseFloat((row["Importe gastado (USD)"] || row["Amount spent (USD)"] || row["Cost"] || "0").toString().replace(/[$,]/g, '')) || 0;
+                        const imp = parseInt((row["Impresiones"] || row["Impressions"] || "0").toString().replace(/,/g, '')) || 0;
+                        const res = parseInt((row["Resultados"] || row["Results"] || row["Clicks"] || "0").toString().replace(/,/g, '')) || 0;
 
                         if(spend === 0 && imp === 0) return;
 
-                        const existingIndex = globalDatabase.findIndex(camp => camp.name === campana && camp.client === currentClient);
-
-                        if (existingIndex !== -1) {
-                            globalDatabase[existingIndex].spend = spend;
-                            globalDatabase[existingIndex].imp = imp;
-                            globalDatabase[existingIndex].results = resultsVal;
-                            globalDatabase[existingIndex].lastUpdate = timestamp;
-                            globalDatabase[existingIndex].isRecentlyUpdated = true;
+                        const idx = globalDatabase.findIndex(c => c.name === name && c.client === client);
+                        if (idx !== -1) {
+                            globalDatabase[idx].spend = spend; globalDatabase[idx].imp = imp; globalDatabase[idx].results = res;
+                            globalDatabase[idx].lastUpdate = time; globalDatabase[idx].isRecentlyUpdated = true;
                         } else {
                             globalDatabase.push({
-                                id: Date.now() + Math.random(),
-                                client: currentClient,
-                                name: campana,
-                                month: detectMonth(campana),
-                                platform: detectedPlatform,
-                                spend: spend,
-                                imp: imp,
-                                results: resultsVal,
-                                lastUpdate: timestamp,
-                                isRecentlyUpdated: false
+                                id: Date.now() + Math.random(), client: client, name: name,
+                                month: (function(n){for(let m of monthsList){if(m!=="-" && n.toLowerCase().includes(m.toLowerCase())) return m;} return "-";})(name),
+                                platform: plat, spend: spend, imp: imp, results: res, lastUpdate: time
                             });
                         }
                     });
-
                     syncCloud();
                     dropText.innerText = "¡Sincronizado!";
                     setTimeout(() => dropText.innerText = "Arrastra el Reporte (CSV)", 3000);
@@ -300,105 +252,68 @@
             });
         }
 
-        // --- FUNCIONES DE TABLA ---
-
-        function updateInlineField(id, field, value) {
-            let index = globalDatabase.findIndex(c => c.id === id);
-            if(index !== -1) {
-                globalDatabase[index][field] = value;
-                syncCloud();
-            }
-        }
-
         function deleteCampaign(id) {
-            if(confirm("¿Eliminar de la nube para todos?")) {
-                globalDatabase = globalDatabase.filter(camp => camp.id !== id);
+            if(confirm("¿Borrar campaña?")) {
+                globalDatabase = globalDatabase.filter(c => c.id !== id);
                 syncCloud();
             }
         }
 
         function clearCampaignsByClient() {
-            const client = clientSelector.value;
-            if(confirm(`¿Borrar TODA la data de ${client}?`)) {
-                globalDatabase = globalDatabase.filter(camp => camp.client !== client);
+            if(confirm(`¿Borrar TODA la data de ${clientSelector.value}?`)) {
+                globalDatabase = globalDatabase.filter(c => c.client !== clientSelector.value);
                 syncCloud();
             }
         }
 
-        function sortTable(field) {
-            if (currentSort.field === field) {
-                currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
-            } else {
-                currentSort.field = field;
-                currentSort.dir = (field === 'name' || field === 'month') ? 'asc' : 'desc';
-            }
+        function updateInlineField(id, field, value) {
+            let idx = globalDatabase.findIndex(c => c.id === id);
+            if(idx !== -1) { globalDatabase[idx][field] = value; syncCloud(); }
+        }
+
+        function sortTable(f) {
+            if (currentSort.field === f) currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+            else { currentSort.field = f; currentSort.dir = (f==='name'||f==='month') ? 'asc' : 'desc'; }
             renderTable();
         }
 
         function renderTable() {
             const tbody = document.getElementById('table_body');
             tbody.innerHTML = '';
-            
-            const currentClient = clientSelector.value;
-            let clientData = globalDatabase.filter(camp => camp.client === currentClient);
+            const client = clientSelector.value;
+            let data = globalDatabase.filter(c => c.client === client);
 
-            document.querySelectorAll('.sort-icon').forEach(el => el.innerText = '');
             if(currentSort.field) {
-                const iconEl = document.getElementById(`sort_icon_${currentSort.field}`);
-                if(iconEl) iconEl.innerText = currentSort.dir === 'asc' ? '▲' : '▼';
-                
-                clientData.sort((a, b) => {
+                data.sort((a,b) => {
                     let vA = a[currentSort.field], vB = b[currentSort.field];
-                    if (typeof vA === 'string') { vA = vA.toLowerCase(); vB = vB.toLowerCase(); }
+                    if(typeof vA === 'string'){ vA=vA.toLowerCase(); vB=vB.toLowerCase(); }
                     return currentSort.dir === 'asc' ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
                 });
             }
 
-            let sumSpend = 0, sumImp = 0;
-
-            clientData.forEach((camp) => {
-                sumSpend += camp.spend;
-                sumImp += camp.imp;
-                let cpr = camp.results > 0 ? camp.spend / camp.results : 0;
-                
-                let platClass = "plat-other";
-                if(camp.platform.includes("FB")) platClass = "plat-fb";
-                if(camp.platform.includes("Google")) platClass = "plat-google";
-                if(camp.platform.includes("TikTok")) platClass = "plat-tiktok";
-
+            let sS=0, sI=0;
+            data.forEach(c => {
+                sS += c.spend; sI += c.imp;
                 const tr = document.createElement('tr');
-                tr.className = `hover:bg-slate-800/50 transition-colors group ${camp.isRecentlyUpdated ? 'row-updated' : ''}`;
+                tr.className = `hover:bg-slate-800/50 transition-colors ${c.isRecentlyUpdated ? 'row-updated' : ''}`;
                 tr.innerHTML = `
-                    <td class="px-4 py-3 pl-6 font-bold">
-                        <select onchange="updateInlineField(${camp.id}, 'month', this.value)" class="inline-select text-blue-300 font-bold">
-                            ${monthsList.map(m => `<option value="${m}" ${camp.month === m ? 'selected' : ''}>${m}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td class="px-4 py-3 font-bold text-white max-w-[220px] truncate" title="${camp.name}">${camp.name}</td>
-                    <td class="px-4 py-3 text-[10px] uppercase ${platClass}">
-                        <select onchange="updateInlineField(${camp.id}, 'platform', this.value)" class="inline-select ${platClass}">
-                            ${platformsList.map(p => `<option value="${p}" ${camp.platform === p ? 'selected' : ''}>${p}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td class="px-4 py-3 text-right font-mono text-blue-400">$${camp.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td class="px-4 py-3 text-right font-mono text-emerald-300">${camp.results.toLocaleString()}</td>
-                    <td class="px-4 py-3 text-right font-mono text-slate-300">${camp.imp.toLocaleString()}</td>
-                    <td class="px-4 py-3 text-right font-mono text-slate-400">$${cpr.toFixed(2)}</td>
-                    <td class="px-4 py-3 text-center text-[10px] text-slate-400">${camp.lastUpdate}</td>
-                    <td class="px-4 py-3 text-center pr-6">
-                        <button onclick="deleteCampaign(${camp.id})" class="text-red-400 hover:text-white bg-red-900/20 p-1 rounded transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                    </td>
+                    <td class="px-4 py-3 pl-6 font-bold"><select onchange="updateInlineField(${c.id}, 'month', this.value)" class="inline-select text-blue-300">${monthsList.map(m=>`<option value="${m}" ${c.month===m?'selected':''}>${m}</option>`).join('')}</select></td>
+                    <td class="px-4 py-3 font-bold text-white truncate max-w-[200px]">${c.name}</td>
+                    <td class="px-4 py-3 text-center"><select onchange="updateInlineField(${c.id}, 'platform', this.value)" class="inline-select">${platformsList.map(p=>`<option value="${p}" ${c.platform===p?'selected':''}>${p}</option>`).join('')}</select></td>
+                    <td class="px-4 py-3 text-right font-mono text-blue-400">$${c.spend.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                    <td class="px-4 py-3 text-right font-mono text-emerald-300">${c.results.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-right font-mono text-slate-300">${c.imp.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-right font-mono text-slate-400">$${(c.results>0?c.spend/c.results:0).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-center text-[10px] text-slate-400">${c.lastUpdate}</td>
+                    <td class="px-4 py-3 text-center pr-6"><button onclick="deleteCampaign(${c.id})" class="text-red-400 bg-red-900/20 p-1 rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
                 `;
-                tbody.appendChild(tr);
-                camp.isRecentlyUpdated = false;
+                tbody.appendChild(tr); c.isRecentlyUpdated = false;
             });
 
-            document.getElementById('tot_spend').innerText = `$${sumSpend.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-            document.getElementById('tot_imp').innerText = sumImp.toLocaleString();
-            document.getElementById('tot_camp').innerText = clientData.length;
-            document.getElementById('avg_cpm').innerText = sumImp > 0 ? `$${((sumSpend / sumImp) * 1000).toFixed(2)}` : "$0.00";
+            document.getElementById('tot_spend').innerText = `$${sS.toLocaleString(undefined,{minimumFractionDigits:2})}`;
+            document.getElementById('tot_imp').innerText = sI.toLocaleString();
+            document.getElementById('tot_camp').innerText = data.length;
+            document.getElementById('avg_cpm').innerText = sI>0 ? `$${((sS/sI)*1000).toFixed(2)}` : "$0.00";
         }
     </script>
 </body>
