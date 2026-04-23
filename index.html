@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GPD | CC2026 Cloud</title>
+    <title>GPD | CC2026 Cloud Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
@@ -35,20 +35,18 @@
         <div class="glass flex flex-col md:flex-row justify-between items-center p-4 rounded-2xl mb-6 border-b-4 border-blue-600 shadow-lg gap-4">
             <div>
                 <h1 class="text-2xl font-black text-white tracking-tighter">GPD <span class="text-blue-500">CC2026</span></h1>
-                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Cloud Sync Active ☁️</p>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Workspace Manager & Data Cloud ☁️</p>
             </div>
             <div class="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-700">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Cuenta Activa:</label>
                 <div class="flex gap-2">
                     <select id="client_selector" class="bg-black text-blue-400 text-sm font-bold p-2 rounded-lg outline-none border border-slate-800 cursor-pointer focus:border-blue-500">
-                        <option value="ALTICE">ALTICE</option>
-                        <option value="BANCO BHD">BANCO BHD</option>
-                        <option value="NESTLÉ">NESTLÉ</option>
-                        <option value="BANCO SANTA CRUZ">BANCO SANTA CRUZ</option>
-                        <option value="APAP">APAP</option>
-                    </select>
-                    <button onclick="addNewClient()" class="bg-slate-800 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-lg">
+                        </select>
+                    <button onclick="addNewClient()" class="bg-slate-800 hover:bg-blue-600 text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-lg" title="Añadir Nuevo Cliente">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                    <button onclick="deleteCurrentClient()" class="bg-slate-800 hover:bg-red-600 text-red-400 hover:text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-lg" title="Eliminar Cliente de la Lista">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
             </div>
@@ -59,7 +57,7 @@
                 <div id="drop_zone" class="glass border-2 border-dashed border-slate-600 p-6 rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center h-full hover:border-blue-400 hover:bg-blue-900/20 group">
                     <svg class="w-10 h-10 text-slate-500 group-hover:text-blue-400 mb-3 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                     <p class="text-sm font-bold text-slate-300 uppercase" id="drop_text">Arrastra el Reporte (CSV)</p>
-                    <p class="text-[10px] text-emerald-400 font-bold mt-1 bg-emerald-900/30 px-2 py-1 rounded">Sincronización en Tiempo Real</p>
+                    <p class="text-[10px] text-slate-500 mt-2">Sincronización automática con el equipo</p>
                     <input type="file" id="file_input" class="hidden" accept=".csv">
                 </div>
             </div>
@@ -86,8 +84,10 @@
 
         <div class="glass rounded-2xl overflow-hidden shadow-2xl relative border border-slate-800">
             <div class="bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-800">
-                <h2 class="text-xs font-bold text-white uppercase tracking-widest">Base de Datos <span id="lbl_client" class="text-blue-400">- ALTICE</span></h2>
-                <button onclick="clearCurrentClient()" class="text-[10px] bg-red-900/50 hover:bg-red-600 text-red-300 hover:text-white px-3 py-1 rounded transition-colors font-bold uppercase">Vaciar Cliente</button>
+                <h2 class="text-xs font-bold text-white uppercase tracking-widest">Base de Datos <span id="lbl_client" class="text-blue-400">- CARGANDO...</span></h2>
+                <div class="flex gap-2">
+                    <button onclick="clearCampaignsByClient()" class="text-[10px] bg-red-900/50 hover:bg-red-600 text-red-300 hover:text-white px-3 py-1 rounded transition-colors font-bold uppercase">Vaciar Datos de Campañas</button>
+                </div>
             </div>
             <div class="table-container">
                 <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -111,7 +111,7 @@
     </div>
 
     <script>
-        // 2. TUS CREDENCIALES DE FIREBASE
+        // 2. CONFIGURACIÓN DE FIREBASE (Usa tus credenciales)
         const firebaseConfig = {
             apiKey: "AIzaSyCh5fkwDR1Jd1KJoPVEwY8gazJI85s2-wE",
             authDomain: "gpd-cc2026.firebaseapp.com",
@@ -120,10 +120,9 @@
             messagingSenderId: "800603232583",
             appId: "1:800603232583:web:9a24bcb6652b9b65849462",
             measurementId: "G-BHR8NSDJVW",
-            databaseURL: "https://gpd-cc2026-default-rtdb.firebaseio.com" // URL de tu Realtime Database
+            databaseURL: "https://gpd-cc2026-default-rtdb.firebaseio.com"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -132,19 +131,82 @@
         const monthsList = ["-", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         const platformsList = ["FB / Instagram", "Google Ads", "DV360", "TikTok", "Twitter", "Spotify", "LinkedIn", "Programmatic"];
 
-        // ELEMENTOS DEL DOM
         const dropZone = document.getElementById('drop_zone');
         const fileInput = document.getElementById('file_input');
         const dropText = document.getElementById('drop_text');
         const clientSelector = document.getElementById('client_selector');
         const lblClient = document.getElementById('lbl_client');
 
-        // --- FUNCIÓN PARA SINCRONIZAR CON LA NUBE ---
+        // --- GESTIÓN DE CLIENTES EN LA NUBE ---
+        
+        db.ref('lista_clientes').on('value', (snapshot) => {
+            const clientes = snapshot.val();
+            const currentSelected = clientSelector.value;
+            
+            if (!clientes) {
+                const iniciales = ["ALTICE", "BANCO BHD", "NESTLÉ", "BANCO SANTA CRUZ", "APAP"];
+                db.ref('lista_clientes').set(iniciales);
+                return;
+            }
+
+            clientSelector.innerHTML = '';
+            clientes.forEach(c => {
+                let opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                clientSelector.appendChild(opt);
+            });
+
+            if (clientes.includes(currentSelected)) {
+                clientSelector.value = currentSelected;
+            }
+            lblClient.innerText = `- ${clientSelector.value}`;
+            renderTable();
+        });
+
+        function addNewClient() {
+            let newClientName = prompt("Nombre del nuevo cliente:");
+            if (newClientName && newClientName.trim() !== "") {
+                newClientName = newClientName.trim().toUpperCase();
+                db.ref('lista_clientes').once('value', (snapshot) => {
+                    let clientes = snapshot.val() || [];
+                    if (!clientes.includes(newClientName)) {
+                        clientes.push(newClientName);
+                        db.ref('lista_clientes').set(clientes);
+                        clientSelector.value = newClientName;
+                    } else {
+                        alert("El cliente ya existe.");
+                    }
+                });
+            }
+        }
+
+        function deleteCurrentClient() {
+            const clientToDelete = clientSelector.value;
+            
+            // Verificar si el cliente tiene campañas cargadas antes de borrarlo
+            const hasCampaigns = globalDatabase.some(camp => camp.client === clientToDelete);
+            
+            let msg = `¿Seguro que quieres borrar a "${clientToDelete}" de la lista?`;
+            if (hasCampaigns) {
+                msg = `¡ATENCIÓN! "${clientToDelete}" tiene campañas cargadas. Si lo borras de la lista, ya no podrás acceder a esos datos desde el selector. \n\n¿Proceder de todos modos?`;
+            }
+
+            if(confirm(msg)) {
+                db.ref('lista_clientes').once('value', (snapshot) => {
+                    let clientes = snapshot.val() || [];
+                    clientes = clientes.filter(c => c !== clientToDelete);
+                    db.ref('lista_clientes').set(clientes);
+                });
+            }
+        }
+
+        // --- GESTIÓN DE DATOS (CAMPANAS) ---
+
         function syncCloud() {
             db.ref('data_marketing').set(globalDatabase);
         }
 
-        // --- ESCUCHAR CAMBIOS DESDE LA NUBE (TIEMPO REAL) ---
         db.ref('data_marketing').on('value', (snapshot) => {
             const data = snapshot.val();
             globalDatabase = data ? Object.values(data) : [];
@@ -156,22 +218,7 @@
             renderTable();
         });
 
-        function addNewClient() {
-            let newClientName = prompt("Introduce el nombre del nuevo cliente:");
-            if (newClientName && newClientName.trim() !== "") {
-                newClientName = newClientName.trim().toUpperCase();
-                let exists = Array.from(clientSelector.options).some(opt => opt.value === newClientName);
-                if (!exists) {
-                    let newOption = document.createElement('option');
-                    newOption.value = newClientName;
-                    newOption.innerHTML = newClientName;
-                    clientSelector.appendChild(newOption);
-                }
-                clientSelector.value = newClientName;
-                lblClient.innerText = `- ${newClientName}`;
-                renderTable();
-            }
-        }
+        // --- PROCESAMIENTO CSV ---
 
         dropZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
@@ -196,7 +243,7 @@
 
         function processCSV(file) {
             if (!file) return;
-            dropText.innerText = "Sincronizando con la nube...";
+            dropText.innerText = "Subiendo a la nube...";
 
             Papa.parse(file, {
                 header: true,
@@ -240,43 +287,44 @@
                                 spend: spend,
                                 imp: imp,
                                 results: resultsVal,
-                                cpr: resultsVal > 0 ? spend / resultsVal : 0,
                                 lastUpdate: timestamp,
                                 isRecentlyUpdated: false
                             });
                         }
                     });
 
-                    syncCloud(); // GUARDAR EN FIREBASE
-                    dropText.innerText = "¡Datos Sincronizados!";
+                    syncCloud();
+                    dropText.innerText = "¡Sincronizado!";
                     setTimeout(() => dropText.innerText = "Arrastra el Reporte (CSV)", 3000);
                 }
             });
         }
 
+        // --- FUNCIONES DE TABLA ---
+
         function updateInlineField(id, field, value) {
             let index = globalDatabase.findIndex(c => c.id === id);
             if(index !== -1) {
                 globalDatabase[index][field] = value;
-                syncCloud(); // GUARDAR EN FIREBASE
+                syncCloud();
             }
         }
 
         function deleteCampaign(id) {
-            if(confirm("¿Eliminar esta campaña de la nube?")) {
+            if(confirm("¿Eliminar de la nube para todos?")) {
                 globalDatabase = globalDatabase.filter(camp => camp.id !== id);
-                syncCloud(); // GUARDAR EN FIREBASE
+                syncCloud();
             }
         }
 
-        function clearCurrentClient() {
-            if(confirm(`¿Borrar TODA la data de ${clientSelector.value} para todos?`)) {
-                globalDatabase = globalDatabase.filter(camp => camp.client !== clientSelector.value);
-                syncCloud(); // GUARDAR EN FIREBASE
+        function clearCampaignsByClient() {
+            const client = clientSelector.value;
+            if(confirm(`¿Borrar TODA la data de ${client}?`)) {
+                globalDatabase = globalDatabase.filter(camp => camp.client !== client);
+                syncCloud();
             }
         }
 
-        // ORDENAMIENTO Y RENDER (IGUAL A TU CÓDIGO)
         function sortTable(field) {
             if (currentSort.field === field) {
                 currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
@@ -294,8 +342,11 @@
             const currentClient = clientSelector.value;
             let clientData = globalDatabase.filter(camp => camp.client === currentClient);
 
-            // Aplicar orden
+            document.querySelectorAll('.sort-icon').forEach(el => el.innerText = '');
             if(currentSort.field) {
+                const iconEl = document.getElementById(`sort_icon_${currentSort.field}`);
+                if(iconEl) iconEl.innerText = currentSort.dir === 'asc' ? '▲' : '▼';
+                
                 clientData.sort((a, b) => {
                     let vA = a[currentSort.field], vB = b[currentSort.field];
                     if (typeof vA === 'string') { vA = vA.toLowerCase(); vB = vB.toLowerCase(); }
@@ -323,20 +374,20 @@
                             ${monthsList.map(m => `<option value="${m}" ${camp.month === m ? 'selected' : ''}>${m}</option>`).join('')}
                         </select>
                     </td>
-                    <td class="px-4 py-3 font-bold text-white max-w-[220px] truncate">${camp.name}</td>
+                    <td class="px-4 py-3 font-bold text-white max-w-[220px] truncate" title="${camp.name}">${camp.name}</td>
                     <td class="px-4 py-3 text-[10px] uppercase ${platClass}">
                         <select onchange="updateInlineField(${camp.id}, 'platform', this.value)" class="inline-select ${platClass}">
                             ${platformsList.map(p => `<option value="${p}" ${camp.platform === p ? 'selected' : ''}>${p}</option>`).join('')}
                         </select>
                     </td>
-                    <td class="px-4 py-3 text-right font-mono text-blue-400">$${camp.spend.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-right font-mono text-blue-400">$${camp.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td class="px-4 py-3 text-right font-mono text-emerald-300">${camp.results.toLocaleString()}</td>
                     <td class="px-4 py-3 text-right font-mono text-slate-300">${camp.imp.toLocaleString()}</td>
                     <td class="px-4 py-3 text-right font-mono text-slate-400">$${cpr.toFixed(2)}</td>
                     <td class="px-4 py-3 text-center text-[10px] text-slate-400">${camp.lastUpdate}</td>
                     <td class="px-4 py-3 text-center pr-6">
-                        <button onclick="deleteCampaign(${camp.id})" class="text-red-400 hover:text-white bg-red-900/20 p-1 rounded">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <button onclick="deleteCampaign(${camp.id})" class="text-red-400 hover:text-white bg-red-900/20 p-1 rounded transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                     </td>
                 `;
@@ -344,7 +395,6 @@
                 camp.isRecentlyUpdated = false;
             });
 
-            // Update Stats
             document.getElementById('tot_spend').innerText = `$${sumSpend.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
             document.getElementById('tot_imp').innerText = sumImp.toLocaleString();
             document.getElementById('tot_camp').innerText = clientData.length;
