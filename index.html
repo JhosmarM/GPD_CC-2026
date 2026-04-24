@@ -131,7 +131,10 @@
         
         const monthsList = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "N/A"];
         let tiposCompra = ["CPM", "CPC", "CPA", "CPV", "CPL", "CPMS", "VTR", "ROAS"];
-        let plataformasList = ["FB / Instagram", "Google Ads", "TikTok", "DV360", "Twitter", "LinkedIn"];
+        
+        // --- AQUÍ ESTÁ LA NUEVA LISTA DE PLATAFORMAS BASADA EN TU IMAGEN ---
+        let plataformasList = ["FB / Instagram", "Google Ads", "TikTok", "DV360", "Twitter", "LinkedIn", "Youtube", "Google Youtube", "DV360 Youtube"];
+        
         const estadosList = ["PENDIENTE", "ACTIVA", "FINALIZADA", "DETENIDO", "PROGRAMADA"];
 
         const clientSelector = document.getElementById('client_selector');
@@ -150,6 +153,8 @@
         });
 
         db.ref('tipos_compra').on('value', s => { if(s.val()) tiposCompra = s.val(); });
+        
+        // Lee la lista de la nube. (Si tienes guardadas otras viejas en tu Firebase, las cargará. Puedes borrarlas con el nuevo botón de eliminar).
         db.ref('lista_plataformas').on('value', s => { if(s.val()) plataformasList = s.val(); });
 
         function handleFile(file, type) {
@@ -337,6 +342,8 @@
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-800/60 transition-all border-b border-slate-800/50";
+                
+                // --- SECCIÓN ACTUALIZADA CON BOTÓN DE ELIMINAR PLATAFORMA ---
                 tr.innerHTML = `
                     <td class="px-4 py-3 pl-6">
                         <select onchange="updateValue(${c.id}, 'month', this.value)" class="bg-transparent border-none w-20 focus:ring-1 ring-blue-500 text-slate-300 font-bold">
@@ -347,7 +354,8 @@
                     <td class="px-4 py-3 text-center">
                         <select onchange="handlePlatformChange(${c.id}, this.value)" class="text-[10px] bg-transparent border-none text-center ${platClass} w-28">
                             ${plataformasList.map(p => `<option value="${p}" ${c.platform==p?'selected':''}>${p}</option>`).join('')}
-                            <option value="NEW" class="text-white">+ Añadir</option>
+                            <option value="NEW" class="text-white font-bold">+ Añadir</option>
+                            <option value="DELETE" class="text-red-500 font-bold">❌ Eliminar...</option>
                         </select>
                     </td>
                     <td class="px-4 py-3 text-center">
@@ -451,13 +459,43 @@
             } else { updateValue(id, 'type', value); }
         }
 
+        // --- FUNCIÓN ACTUALIZADA CON LÓGICA DE ELIMINAR PLATAFORMA ---
         function handlePlatformChange(id, value) {
             if(value === 'NEW') {
                 const nuevo = prompt("Nueva Plataforma:")?.trim();
                 if(nuevo && !plataformasList.includes(nuevo)) {
-                    plataformasList.push(nuevo); db.ref('lista_plataformas').set(plataformasList); updateValue(id, 'platform', nuevo);
-                } else if (nuevo) { updateValue(id, 'platform', nuevo); } else { renderTable(); }
-            } else { updateValue(id, 'platform', value); }
+                    plataformasList.push(nuevo); 
+                    db.ref('lista_plataformas').set(plataformasList); 
+                    updateValue(id, 'platform', nuevo);
+                } else if (nuevo) { 
+                    updateValue(id, 'platform', nuevo); 
+                } else { 
+                    renderTable(); 
+                }
+            } else if (value === 'DELETE') {
+                const listaTexto = plataformasList.join("\n- ");
+                const aBorrar = prompt(`¿Qué plataforma deseas eliminar de la base de datos?\nEscribe el nombre exacto:\n\n- ${listaTexto}`)?.trim();
+                
+                if (aBorrar) {
+                    const index = plataformasList.findIndex(p => p.toLowerCase() === aBorrar.toLowerCase());
+                    if (index !== -1) {
+                        if (confirm(`¿Estás seguro de que deseas eliminar "${plataformasList[index]}" de forma permanente?`)) {
+                            plataformasList.splice(index, 1);
+                            db.ref('lista_plataformas').set(plataformasList);
+                            renderTable();
+                        } else {
+                            renderTable(); 
+                        }
+                    } else {
+                        alert("No se encontró ninguna plataforma con ese nombre exacto.");
+                        renderTable(); 
+                    }
+                } else {
+                    renderTable(); 
+                }
+            } else { 
+                updateValue(id, 'platform', value); 
+            }
         }
 
         function addNewCampaignManual() {
