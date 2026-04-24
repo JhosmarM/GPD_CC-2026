@@ -15,12 +15,29 @@
         .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .table-container { max-height: 55vh; overflow-y: auto; }
         th { position: sticky; top: 0; z-index: 10; background-color: #111827; }
-        .badge-active { background: #065f46; color: #34d399; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; }
+        
         input[type="number"], input[type="text"], select { 
             background: #0f172a; color: white; border: 1px solid #334155; 
             border-radius: 4px; padding: 2px 4px; font-size: 10px; outline: none;
         }
-        select option { background-color: #0f172a; }
+        select option { background-color: #0f172a; color: white; }
+
+        /* --- COLORES CORPORATIVOS ORIGINALES --- */
+        .plat-fb { color: #1877F2; font-weight: 900; } /* Meta Azul */
+        .plat-google { color: #FBBC05; font-weight: 900; } /* Google Amarillo */
+        .plat-tiktok { color: #9254ff; font-weight: 900; } /* TikTok Morado */
+        .plat-dv360 { color: #34A853; font-weight: 900; } /* DV360 Verde */
+        .plat-twitter { color: #ffffff; background-color: #000000; padding: 1px 4px; border-radius: 2px; font-weight: 900; } /* Twitter Negro/Blanco */
+        .plat-linkedin { color: #ffffff; font-weight: 900; text-shadow: 0 0 1px #0A66C2; } /* LinkedIn Blanco */
+        .plat-default { color: #94a3b8; font-weight: 900; }
+
+        /* Estilos de Estado */
+        .status-pill { padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
+        .status-activa { background: #065f46; color: #34d399; }
+        .status-detenido { background: #7f1d1d; color: #f87171; }
+        .status-pendiente { background: #78350f; color: #fbbf24; }
+        .status-finalizada { background: #1e293b; color: #94a3b8; }
+        .status-programada { background: #3730a3; color: #a5b4fc; }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -45,7 +62,7 @@
                 <input type="file" id="file_report" class="hidden" accept=".csv, .xlsx">
             </div>
             <div onclick="document.getElementById('file_planner').click()" class="glass border-2 border-dashed border-slate-600 p-6 rounded-2xl cursor-pointer hover:border-emerald-400 text-center group transition-all">
-                <p class="text-xs font-black text-emerald-400 uppercase mb-1">2. Subir Planner (XLSX)</p>
+                <p class="text-xs font-black text-emerald-400 uppercase mb-1">2. SUBIR EL PLAN (XLSX)</p>
                 <p class="text-[9px] text-slate-500 uppercase">Carga líneas tácticas y objetivos</p>
                 <input type="file" id="file_planner" class="hidden" accept=".xlsx">
             </div>
@@ -75,6 +92,7 @@
                             <th class="px-4 py-4 text-right text-emerald-300">KPI Real</th>
                             <th class="px-4 py-4 text-right">Logro KPI %</th>
                             <th class="px-4 py-4 text-center">Estado</th>
+                            <th class="px-4 py-4 text-center">Última Act.</th>
                             <th class="px-4 py-4 text-center pr-6">Eliminar</th>
                         </tr>
                     </thead>
@@ -111,15 +129,14 @@
         const db = firebase.database();
         let globalDatabase = [];
         
-        // LISTAS GLOBALES
         const monthsList = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "N/A"];
         let tiposCompra = ["CPM", "CPC", "CPA", "CPV", "CPL", "CPMS", "VTR", "ROAS"];
         let plataformasList = ["FB / Instagram", "Google Ads", "TikTok", "DV360", "Twitter", "LinkedIn"];
+        const estadosList = ["PENDIENTE", "ACTIVA", "FINALIZADA", "DETENIDO", "PROGRAMADA"];
 
         const clientSelector = document.getElementById('client_selector');
         const tableBody = document.getElementById('table_body');
 
-        // --- CARGA INICIAL DESDE FIREBASE ---
         db.ref('lista_clientes').on('value', s => {
             const list = s.val() || [];
             const cur = clientSelector.value;
@@ -135,7 +152,6 @@
         db.ref('tipos_compra').on('value', s => { if(s.val()) tiposCompra = s.val(); });
         db.ref('lista_plataformas').on('value', s => { if(s.val()) plataformasList = s.val(); });
 
-        // --- FUNCIONES DE SINCRONIZACIÓN ---
         function handleFile(file, type) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -202,6 +218,7 @@
             const client = clientSelector.value;
             const campKeys = ["campaña", "campaign", "nombre de la campaña", "campaign name"];
             const spendKeys = ["importe gastado (usd)", "importe gastado", "amount spent", "amount spent (usd)", "cost", "costo"];
+            const now = new Date().toLocaleString();
 
             rows.forEach(row => {
                 let rawName = mode === 'planner' ? row.name : getExactValue(row, campKeys);
@@ -218,19 +235,20 @@
                         globalDatabase[idx].spend_plan = usd;
                         globalDatabase[idx].kpi_plan = row.kpi_p || 0;
                         globalDatabase[idx].type = row.type || globalDatabase[idx].type;
+                        globalDatabase[idx].last_update = now;
                         if(row.mes) globalDatabase[idx].month = row.mes;
                         if(row.platform) globalDatabase[idx].platform = row.platform;
                     } else {
                         globalDatabase.push({
                             id: Date.now() + Math.random(), client, name, 
                             month: row.mes || detectedMonth, platform: row.platform || "FB / Instagram", type: row.type || "CPM",
-                            spend_plan: usd, kpi_plan: row.kpi_p || 0, spend_real: 0, kpi_real: 0
+                            spend_plan: usd, kpi_plan: row.kpi_p || 0, spend_real: 0, kpi_real: 0, 
+                            last_update: now, status: "ACTIVA"
                         });
                     }
                 } else {
                     const rawSpend = getExactValue(row, spendKeys);
                     const spend = parseNum(rawSpend);
-                    
                     const findKey = (valid, invalid) => {
                         let k = Object.keys(row).find(x => {
                             let lw = x.toLowerCase();
@@ -253,11 +271,12 @@
                         if(m_views > 0) globalDatabase[idx].metric_views = m_views;
                         if(m_leads > 0) globalDatabase[idx].metric_leads = m_leads;
                         if(globalDatabase[idx].month === "N/A" && detectedMonth !== "N/A") globalDatabase[idx].month = detectedMonth;
+                        globalDatabase[idx].last_update = now;
                     } else {
                         globalDatabase.push({
                             id: Date.now() + Math.random(), client, name, month: detectedMonth, platform: detectedPlatform, type: "CPM", 
                             spend_plan: 0, spend_real: spend, kpi_plan: 0, metric_imp: m_imp, metric_clicks: m_clicks, metric_conv: m_conv,
-                            metric_views: m_views, metric_leads: m_leads
+                            metric_views: m_views, metric_leads: m_leads, last_update: now, status: "ACTIVA"
                         });
                     }
                 }
@@ -265,11 +284,31 @@
             db.ref('data_marketing').set(globalDatabase);
         }
 
-        // --- RENDERIZADO Y SMART INSIGHTS ---
         db.ref('data_marketing').on('value', s => {
             globalDatabase = s.val() ? Object.values(s.val()) : [];
             renderTable();
         });
+
+        function getPlatformClass(platform) {
+            const p = (platform || "").toLowerCase();
+            if(p.includes('fb') || p.includes('meta') || p.includes('instagram')) return 'plat-fb';
+            if(p.includes('google')) return 'plat-google';
+            if(p.includes('tiktok')) return 'plat-tiktok';
+            if(p.includes('dv360')) return 'plat-dv360';
+            if(p.includes('twitter')) return 'plat-twitter';
+            if(p.includes('linkedin')) return 'plat-linkedin';
+            return 'plat-default';
+        }
+
+        function getStatusClass(status) {
+            const s = (status || "ACTIVA").toLowerCase();
+            if(s === 'activa') return 'status-activa';
+            if(s === 'detenido') return 'status-detenido';
+            if(s === 'pendiente') return 'status-pendiente';
+            if(s === 'finalizada') return 'status-finalizada';
+            if(s === 'programada') return 'status-programada';
+            return '';
+        }
 
         function renderTable() {
             tableBody.innerHTML = '';
@@ -288,12 +327,13 @@
                 else if (t === "CPA" || t === "ROAS") actualKpi = c.metric_conv || c.kpi_real || 0;
                 else actualKpi = c.kpi_real || c.metric_conv || c.metric_clicks || c.metric_imp || 0;
 
-                // Guardamos el dato calculado real para enviarlo a los Insights
                 c.calculated_kpi = actualKpi;
                 currentClientData.push(c);
 
                 const varInv = c.spend_plan > 0 ? (c.spend_real / c.spend_plan) * 100 : 0;
                 const logKpi = c.kpi_plan > 0 ? (actualKpi / c.kpi_plan) * 100 : 0;
+                const platClass = getPlatformClass(c.platform);
+                const statusClass = getStatusClass(c.status);
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-800/60 transition-all border-b border-slate-800/50";
@@ -305,9 +345,9 @@
                     </td>
                     <td class="px-4 py-3 font-bold text-white max-w-[200px] truncate" title="${c.name}">${c.name}</td>
                     <td class="px-4 py-3 text-center">
-                        <select onchange="handlePlatformChange(${c.id}, this.value)" class="text-[10px] bg-transparent border-none text-center text-slate-300 font-bold w-28">
+                        <select onchange="handlePlatformChange(${c.id}, this.value)" class="text-[10px] bg-transparent border-none text-center ${platClass} w-28">
                             ${plataformasList.map(p => `<option value="${p}" ${c.platform==p?'selected':''}>${p}</option>`).join('')}
-                            <option value="NEW">+ Añadir</option>
+                            <option value="NEW" class="text-white">+ Añadir</option>
                         </select>
                     </td>
                     <td class="px-4 py-3 text-center">
@@ -322,27 +362,26 @@
                     <td class="px-4 py-3 text-right"><input type="number" value="${c.kpi_plan}" onchange="updateValue(${c.id}, 'kpi_plan', this.value)" class="text-right text-slate-400 w-20"></td>
                     <td class="px-4 py-3 text-right font-mono text-emerald-300 font-bold">${actualKpi.toLocaleString()}</td>
                     <td class="px-4 py-3 text-right font-black text-emerald-500">${logKpi.toFixed(1)}%</td>
-                    <td class="px-4 py-3 text-center"><span class="badge-active">ACTIVO</span></td>
+                    <td class="px-4 py-3 text-center">
+                        <select onchange="updateValue(${c.id}, 'status', this.value)" class="bg-transparent border-none status-pill ${statusClass}">
+                            ${estadosList.map(est => `<option value="${est}" ${c.status===est?'selected':''}>${est}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="px-4 py-3 text-center text-[8px] text-slate-500 font-mono">${c.last_update || '-'}</td>
                     <td class="px-4 py-3 text-center pr-6"><button onclick="deleteRow(${c.id})" class="text-slate-600 hover:text-red-500 transition-colors">✕</button></td>
                 `;
                 tableBody.appendChild(tr);
             });
-
-            // Llamar al motor de Insights después de dibujar la tabla
             generateInsights(currentClientData);
         }
 
-        // --- MOTOR DE SMART INSIGHTS ---
         function generateInsights(data) {
             const container = document.getElementById('ai_insights_container');
             if(data.length === 0) {
                 container.innerHTML = '<p class="text-slate-500 italic">No hay datos en esta cuenta para analizar. Sube tu Planner y Reporte Real.</p>';
                 return;
             }
-
             let html = '';
-            
-            // 1. Alerta de Presupuesto (Sobregiro > 105%)
             const overBudget = data.filter(c => c.spend_plan > 0 && (c.spend_real / c.spend_plan) > 1.05);
             if(overBudget.length > 0) {
                 html += `
@@ -354,8 +393,6 @@
                     </div>
                 </div>`;
             }
-
-            // 2. Oportunidad / Bajo Ritmo (Consumo menor al 40% pero KPI alto, o viceversa)
             const underSpent = data.filter(c => c.spend_plan > 0 && (c.spend_real / c.spend_plan) < 0.40 && c.calculated_kpi > 0);
             if(underSpent.length > 0) {
                 html += `
@@ -367,8 +404,6 @@
                     </div>
                 </div>`;
             }
-
-            // 3. Top Performance (Mayor % de logro de KPI)
             let bestCamp = null;
             let maxLogro = 0;
             data.forEach(c => {
@@ -385,8 +420,6 @@
                     </div>
                 </div>`;
             }
-
-            // Si todo está muy normal y no hay alertas:
             if(html === '') {
                 html = `
                 <div class="flex gap-3 items-start p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
@@ -397,15 +430,14 @@
                     </div>
                 </div>`;
             }
-
             container.innerHTML = html;
         }
 
-        // --- UTILIDADES ---
         function updateValue(id, field, value) {
             const idx = globalDatabase.findIndex(x => x.id == id);
             if(idx !== -1) {
                 globalDatabase[idx][field] = (field.includes('spend') || field.includes('kpi')) ? parseFloat(value) || 0 : value;
+                globalDatabase[idx].last_update = new Date().toLocaleString();
                 db.ref('data_marketing').set(globalDatabase);
             }
         }
@@ -435,7 +467,7 @@
             if(name) {
                 globalDatabase.push({
                     id: Date.now(), client, name, month: "N/A", platform: "FB / Instagram", type: "CPM",
-                    spend_plan: 0, spend_real: 0, kpi_plan: 0, kpi_real: 0
+                    spend_plan: 0, spend_real: 0, kpi_plan: 0, kpi_real: 0, status: "ACTIVA", last_update: new Date().toLocaleString()
                 });
                 db.ref('data_marketing').set(globalDatabase);
             }
