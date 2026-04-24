@@ -316,7 +316,45 @@
             aiTimeout = setTimeout(() => forceAIUpdate(), 2000);
         }
 
-       // --- GEMINI PRO INTEGRATION (CON DETECTOR DE ERRORES) ---
+     // --- GEMINI PRO INTEGRATION (CON DETECTOR DE ERRORES) ---
+
+// Función para obtener los modelos disponibles de la API
+async function getAvailableModels() {
+    const container = document.getElementById('ai_insights_container');
+    
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "") {
+        container.innerHTML = '<p class="text-red-400 text-xs font-bold">⚠️ Error: No hay API Key configurada.</p>';
+        return;
+    }
+
+    try {
+        // Realiza la solicitud para listar los modelos disponibles
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error?.message || "Error al obtener la lista de modelos");
+        }
+
+        // Muestra la lista de modelos en el contenedor
+        const models = result.models || [];
+        container.innerHTML = '<p class="text-green-400 text-xs font-bold">Modelos disponibles:</p><ul>';
+        models.forEach(model => {
+            container.innerHTML += `<li>${model.name}</li>`;
+        });
+        container.innerHTML += '</ul>';
+        
+    } catch (error) {
+        console.error("Error de conexión IA:", error);
+        container.innerHTML = `<p class="text-red-400 text-xs font-bold bg-red-900/20 p-2 rounded border border-red-500">⚠️ Error: ${error.message}</p>`;
+    }
+}
+
+// --- LA FUNCION QUE EJECUTA LA SOLICITUD DEL MODELO --- 
 async function forceAIUpdate() {
     const container = document.getElementById('ai_insights_container');
     
@@ -343,7 +381,7 @@ async function forceAIUpdate() {
     `;
 
     try {
-        // Aquí está el ajuste del modelo a gemini-3.1-pro
+        // Aquí realiza la solicitud para el modelo adecuado, por ejemplo "gemini-3.1-pro"
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -364,6 +402,10 @@ async function forceAIUpdate() {
         container.innerHTML = `<p class="text-red-400 text-xs font-bold bg-red-900/20 p-2 rounded border border-red-500">⚠️ Error de conexión IA: ${error.message}</p>`; 
     }
 }
+
+// Llamada a la función para listar los modelos al cargar la página (puedes llamar esto en cualquier parte del flujo de la interfaz)
+getAvailableModels();  // Llama esta función cuando quieras ver los modelos disponibles
+
 
         function updateValue(id, field, value) { const idx = globalDatabase.findIndex(x => x.id == id); if(idx !== -1) { globalDatabase[idx][field] = (field.includes('spend') || field.includes('kpi')) ? parseFloat(value) || 0 : value; db.ref('data_marketing').set(globalDatabase); } }
         function handleTypeChange(id, value) { if(value === 'NEW') { const nuevo = prompt("Nuevo Tipo de Compra:")?.toUpperCase().trim(); if(nuevo && !tiposCompra.includes(nuevo)) { tiposCompra.push(nuevo); db.ref('tipos_compra').set(tiposCompra); updateValue(id, 'type', nuevo); } else if(nuevo) { updateValue(id, 'type', nuevo); } else { renderTable(); } } else { updateValue(id, 'type', value); } }
