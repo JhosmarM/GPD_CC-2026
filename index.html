@@ -10,6 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         body { background-color: #030712; color: #f8fafc; font-family: 'Segoe UI', sans-serif; }
         .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
@@ -23,12 +25,12 @@
         select option { background-color: #0f172a; color: white; }
 
         /* --- COLORES CORPORATIVOS ORIGINALES --- */
-        .plat-fb { color: #1877F2; font-weight: 900; } /* Meta Azul */
-        .plat-google { color: #FBBC05; font-weight: 900; } /* Google Amarillo */
-        .plat-tiktok { color: #9254ff; font-weight: 900; } /* TikTok Morado */
-        .plat-dv360 { color: #34A853; font-weight: 900; } /* DV360 Verde */
-        .plat-twitter { color: #ffffff; background-color: #000000; padding: 1px 4px; border-radius: 2px; font-weight: 900; } /* Twitter Negro/Blanco */
-        .plat-linkedin { color: #ffffff; font-weight: 900; text-shadow: 0 0 1px #0A66C2; } /* LinkedIn Blanco */
+        .plat-fb { color: #1877F2; font-weight: 900; } 
+        .plat-google { color: #FBBC05; font-weight: 900; } 
+        .plat-tiktok { color: #9254ff; font-weight: 900; } 
+        .plat-dv360 { color: #34A853; font-weight: 900; } 
+        .plat-twitter { color: #ffffff; background-color: #000000; padding: 1px 4px; border-radius: 2px; font-weight: 900; } 
+        .plat-linkedin { color: #ffffff; font-weight: 900; text-shadow: 0 0 1px #0A66C2; } 
         .plat-default { color: #94a3b8; font-weight: 900; }
 
         /* Estilos de Estado */
@@ -58,7 +60,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div onclick="document.getElementById('file_report').click()" class="glass border-2 border-dashed border-slate-600 p-6 rounded-2xl cursor-pointer hover:border-blue-400 text-center group transition-all">
                 <p class="text-xs font-black text-blue-400 uppercase mb-1">1. Reporte Plataforma (CSV/XLSX)</p>
-                <p class="text-[9px] text-slate-500 uppercase">Detecta automáticamente Inversión y Resultados</p>
+                <p class="text-[9px] text-slate-500 uppercase">Detecta Inversión y Resultados</p>
                 <input type="file" id="file_report" class="hidden" accept=".csv, .xlsx">
             </div>
             <div onclick="document.getElementById('file_planner').click()" class="glass border-2 border-dashed border-slate-600 p-6 rounded-2xl cursor-pointer hover:border-emerald-400 text-center group transition-all">
@@ -75,7 +77,10 @@
         <div class="glass rounded-2xl overflow-hidden border border-slate-800 shadow-2xl mb-6">
             <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex justify-between items-center">
                 <h2 class="text-[10px] font-bold text-white uppercase tracking-widest">Base de Datos: <span id="lbl_client" class="text-blue-400">Seleccione Cuenta</span></h2>
-                <button onclick="clearCampaignsByClient()" class="text-[9px] bg-red-900/40 hover:bg-red-600 text-red-300 px-3 py-1 rounded font-bold uppercase transition-all">Vaciar Datos</button>
+                <div class="flex gap-2">
+                    <button onclick="toggleDashboard()" class="text-[9px] bg-blue-900/40 hover:bg-blue-600 text-blue-300 px-3 py-1 rounded font-bold uppercase transition-all">📊 Ver Dashboard</button>
+                    <button onclick="clearCampaignsByClient()" class="text-[9px] bg-red-900/40 hover:bg-red-600 text-red-300 px-3 py-1 rounded font-bold uppercase transition-all">Vaciar Datos</button>
+                </div>
             </div>
             <div class="table-container">
                 <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -85,8 +90,8 @@
                             <th class="px-4 py-4">Campaña / Línea Táctica</th>
                             <th class="px-4 py-4 text-center">Plataforma</th>
                             <th class="px-4 py-4 text-center">Tipo Compra</th>
-                            <th class="px-4 py-4 text-right text-emerald-400">Inversión Plataforma</th>
-                            <th class="px-4 py-4 text-right text-blue-400">Inversión Consumida</th>
+                            <th class="px-4 py-4 text-right text-emerald-400">Inversión Plan</th>
+                            <th class="px-4 py-4 text-right text-blue-400">Inversión Real</th>
                             <th class="px-4 py-4 text-right">Variación %</th>
                             <th class="px-4 py-4 text-right text-slate-500">KPI Plan</th>
                             <th class="px-4 py-4 text-right text-emerald-300">KPI Real</th>
@@ -98,6 +103,24 @@
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-800 text-[10px] text-slate-300"></tbody>
                 </table>
+            </div>
+        </div>
+
+        <div id="dashboard_container" class="hidden glass rounded-2xl p-6 border-t-4 border-emerald-500 shadow-2xl mb-6">
+            <h3 class="text-lg font-black text-white uppercase tracking-widest mb-4">Resumen Visual: <span id="dash_client_name" class="text-emerald-400"></span></h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                    <canvas id="chartInversion" height="200"></canvas>
+                </div>
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex justify-center">
+                    <canvas id="chartPlataformas" height="200"></canvas>
+                </div>
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex justify-center">
+                    <canvas id="chartEstados" height="200"></canvas>
+                </div>
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                    <canvas id="chartTopCampanas" height="200"></canvas>
+                </div>
             </div>
         </div>
 
@@ -131,14 +154,17 @@
         
         const monthsList = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "N/A"];
         let tiposCompra = ["CPM", "CPC", "CPA", "CPV", "CPL", "CPMS", "VTR", "ROAS"];
-        
-        // --- AQUÍ ESTÁ LA NUEVA LISTA DE PLATAFORMAS BASADA EN TU IMAGEN ---
         let plataformasList = ["FB / Instagram", "Google Ads", "TikTok", "DV360", "Twitter", "LinkedIn", "Youtube", "Google Youtube", "DV360 Youtube"];
-        
         const estadosList = ["PENDIENTE", "ACTIVA", "FINALIZADA", "DETENIDO", "PROGRAMADA"];
 
         const clientSelector = document.getElementById('client_selector');
         const tableBody = document.getElementById('table_body');
+        
+        // Variables globales para los gráficos
+        let chartInvInst = null;
+        let chartPlatInst = null;
+        let chartEstInst = null;
+        let chartTopInst = null;
 
         db.ref('lista_clientes').on('value', s => {
             const list = s.val() || [];
@@ -153,8 +179,6 @@
         });
 
         db.ref('tipos_compra').on('value', s => { if(s.val()) tiposCompra = s.val(); });
-        
-        // Lee la lista de la nube. (Si tienes guardadas otras viejas en tu Firebase, las cargará. Puedes borrarlas con el nuevo botón de eliminar).
         db.ref('lista_plataformas').on('value', s => { if(s.val()) plataformasList = s.val(); });
 
         function handleFile(file, type) {
@@ -343,7 +367,6 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-800/60 transition-all border-b border-slate-800/50";
                 
-                // --- SECCIÓN ACTUALIZADA CON BOTÓN DE ELIMINAR PLATAFORMA ---
                 tr.innerHTML = `
                     <td class="px-4 py-3 pl-6">
                         <select onchange="updateValue(${c.id}, 'month', this.value)" class="bg-transparent border-none w-20 focus:ring-1 ring-blue-500 text-slate-300 font-bold">
@@ -381,6 +404,147 @@
                 tableBody.appendChild(tr);
             });
             generateInsights(currentClientData);
+            
+            if(!document.getElementById('dashboard_container').classList.contains('hidden')) {
+                updateDashboard(currentClientData);
+            }
+        }
+
+        function toggleDashboard() {
+            const container = document.getElementById('dashboard_container');
+            if(container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                const cur = clientSelector.value;
+                const data = globalDatabase.filter(c => c.client === cur);
+                updateDashboard(data);
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function updateDashboard(data) {
+            const cur = clientSelector.value;
+            document.getElementById('dash_client_name').innerText = cur || "N/A";
+
+            let totalPlan = 0;
+            let totalReal = 0;
+            let platformData = {};
+            let statusData = {};
+
+            data.forEach(c => {
+                totalPlan += (c.spend_plan || 0);
+                totalReal += (c.spend_real || 0);
+                
+                let plat = c.platform || 'Desconocida';
+                platformData[plat] = (platformData[plat] || 0) + (c.spend_real || 0);
+
+                let stat = c.status || 'ACTIVA';
+                statusData[stat] = (statusData[stat] || 0) + 1;
+            });
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
+
+            // Gráfico 1: Inversión Plan vs Real
+            if(chartInvInst) chartInvInst.destroy();
+            const ctx1 = document.getElementById('chartInversion').getContext('2d');
+            chartInvInst = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Inversión'],
+                    datasets: [
+                        { label: 'Planificado (USD)', data: [totalPlan], backgroundColor: 'rgba(52, 211, 153, 0.7)', borderRadius: 4 },
+                        { label: 'Consumido (USD)', data: [totalReal], backgroundColor: 'rgba(96, 165, 250, 0.7)', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' }, title: { display: true, text: 'Consumo de Presupuesto', color: '#fff' } },
+                    scales: { y: { beginAtZero: true, grid: { color: '#334155' } }, x: { grid: { display: false } } }
+                }
+            });
+
+            // Gráfico 2: Distribución por Plataforma
+            if(chartPlatInst) chartPlatInst.destroy();
+            const ctx2 = document.getElementById('chartPlataformas').getContext('2d');
+            const platLabels = Object.keys(platformData);
+            const platValues = Object.values(platformData);
+            const platColors = platLabels.map(p => {
+                let lower = p.toLowerCase();
+                if(lower.includes('fb') || lower.includes('meta')) return '#1877F2';
+                if(lower.includes('google')) return '#FBBC05';
+                if(lower.includes('tiktok')) return '#9254ff';
+                if(lower.includes('dv360')) return '#34A853';
+                if(lower.includes('twitter')) return '#333333';
+                if(lower.includes('linkedin')) return '#0A66C2';
+                return '#94a3b8';
+            });
+
+            chartPlatInst = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: platLabels,
+                    datasets: [{ data: platValues, backgroundColor: platColors, borderWidth: 2, borderColor: '#0f172a' }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' }, title: { display: true, text: 'Gasto Real por Plataforma', color: '#fff' } }
+                }
+            });
+
+            // Gráfico 3: Estados de Campaña (Pie Chart)
+            if(chartEstInst) chartEstInst.destroy();
+            const ctx3 = document.getElementById('chartEstados').getContext('2d');
+            const estLabels = Object.keys(statusData);
+            const estValues = Object.values(statusData);
+            const estColors = estLabels.map(e => {
+                if(e === 'ACTIVA') return '#34d399';
+                if(e === 'DETENIDO') return '#f87171';
+                if(e === 'PENDIENTE') return '#fbbf24';
+                if(e === 'FINALIZADA') return '#94a3b8';
+                if(e === 'PROGRAMADA') return '#a5b4fc';
+                return '#64748b';
+            });
+
+            chartEstInst = new Chart(ctx3, {
+                type: 'pie',
+                data: {
+                    labels: estLabels,
+                    datasets: [{ data: estValues, backgroundColor: estColors, borderWidth: 2, borderColor: '#0f172a' }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' }, title: { display: true, text: 'Campañas por Estado', color: '#fff' } }
+                }
+            });
+
+            // Gráfico 4: Top 5 Campañas por Gasto (Barra Horizontal)
+            if(chartTopInst) chartTopInst.destroy();
+            const ctx4 = document.getElementById('chartTopCampanas').getContext('2d');
+            
+            // Ordenar por gasto y tomar las top 5
+            let topCamps = [...data].sort((a, b) => (b.spend_real || 0) - (a.spend_real || 0)).slice(0, 5);
+            let topNames = topCamps.map(c => c.name.length > 18 ? c.name.substring(0, 18) + '...' : c.name);
+            let topSpends = topCamps.map(c => c.spend_real || 0);
+
+            chartTopInst = new Chart(ctx4, {
+                type: 'bar',
+                data: {
+                    labels: topNames,
+                    datasets: [{
+                        label: 'Gasto Real (USD)',
+                        data: topSpends,
+                        backgroundColor: 'rgba(167, 139, 250, 0.7)', // Purple 400
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Lo hace horizontal
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: 'Top 5 Campañas (Mayor Inversión)', color: '#fff' } },
+                    scales: { x: { beginAtZero: true, grid: { color: '#334155' } }, y: { grid: { display: false } } }
+                }
+            });
         }
 
         function generateInsights(data) {
@@ -459,7 +623,6 @@
             } else { updateValue(id, 'type', value); }
         }
 
-        // --- FUNCIÓN ACTUALIZADA CON LÓGICA DE ELIMINAR PLATAFORMA ---
         function handlePlatformChange(id, value) {
             if(value === 'NEW') {
                 const nuevo = prompt("Nueva Plataforma:")?.trim();
